@@ -1,8 +1,8 @@
-# Copyright 2022, 2024, Oracle Corporation and/or its affiliates.
+# Copyright 2022, 2025, Oracle Corporation and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 
-name: CI Build
+name: CI nslookup Build
 on:
   workflow_dispatch:
   schedule:
@@ -13,11 +13,11 @@ on:
   pull_request:
     branches: [ main ]
 jobs:
-  ci:
+  ci-nslookup:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9.x", "3.10.x", "3.11.x", "3.12.x", "3.13.x"]
+        python-version: ["3.9.x"]
         poetry-version: ["1.8.4"]
         os: [ubuntu-latest]
         coherenceVersion:
@@ -25,23 +25,8 @@ jobs:
           - 22.06.13
         base-image:
           - gcr.io/distroless/java17-debian11
-        profile:
-          - ",-jakarta,javax"
-          - ",jakarta,-javax"
-        exclude:
-          - coherenceVersion: 25.03.2
-            profile: ",-jakarta,javax"
-          - coherenceVersion: 22.06.13
-            profile: ",jakarta,-javax"
-
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Get Docker Images
-        shell: bash
-        run: |
-          docker pull ${{ matrix.base-image }}
-          uname -a
-
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -74,13 +59,22 @@ jobs:
       - name: Validate Sources
         run: python -m poetry run make validate
 
+      - name: Run Coherence Server
+        shell: bash
+        run: |
+          export COHERENCE_VERSION=${{ matrix.coherenceVersion }}
+          curl -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
+          cohctl version
+          cohctl create cluster grpc-cluster -v ${{ matrix.coherenceVersion }} -y -a coherence-grpc-proxy
+          sleep 20
+          cohctl monitor health -n localhost:7574 -T 40 -w
+
       - name: Run test
         shell: bash
         run: |
-          python -m poetry run ./tests/scripts/run-tests.sh \
-                  ${{ matrix.coherenceVersion }} \
-                  ${{ matrix.base-image }} \
-                  ${{ matrix.profile }}
+          export COHERENCE_SERVER_ADDRESS=coherence:///localhost:7574
+          python -m poetry run make test-nslookup
+
       - name: Archive server logs
         if: failure()
         uses: actions/upload-artifact@v4

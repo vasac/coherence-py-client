@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------------------------------------------------
-# Copyright (c) 2022, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2022, 2025, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 #
@@ -23,12 +23,12 @@ print(os.path.abspath("../src"))
 sys.path.insert(0, os.path.abspath("../src"))
 
 # The full version, including alpha/beta/rc tags
-release = "1.1.1"
+release = "2.0.4"
 
 # -- Project information -----------------------------------------------------
 
-project = "Coherence Python Client. v%s" % release
-copyright = "(c) 2022, 2024, Oracle and/or its affiliates."
+project = "Python Client for Oracle Coherence. v%s" % release
+copyright = "(c) 2022, 2025, Oracle and/or its affiliates."
 author = "Oracle"
 
 

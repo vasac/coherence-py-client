@@ -1,4 +1,4 @@
-# Copyright (c) 2022, 2024, Oracle and/or its affiliates.
+# Copyright (c) 2022, 2025, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 
@@ -12,8 +12,8 @@ from grpc import StatusCode
 from grpc.aio import AioRpcError
 
 import tests
-from coherence import Aggregators, Filters, MapEntry, NamedCache, Session, request_timeout
-from coherence.client import CacheOptions
+from coherence import COH_LOG, Aggregators, Filters, MapEntry, NamedCache, Session, request_timeout
+from coherence.client import CacheOptions, OperationNotSupportedError
 from coherence.event import MapLifecycleEvent
 from coherence.extractor import ChainedExtractor, Extractors, UniversalExtractor
 from coherence.processor import ExtractorProcessor
@@ -363,6 +363,16 @@ async def test_is_empty(cache: NamedCache[str, str]) -> None:
     assert r is True
 
 
+@pytest.mark.asyncio
+async def test_is_ready(cache: NamedCache[str, str]) -> None:
+    try:
+        r: bool = await cache.is_ready()
+        assert r is True
+    except OperationNotSupportedError as e:
+        COH_LOG.info("Skipped " + str(e))
+        pytest.skip("Server version does not support is_ready method.")
+
+
 # noinspection PyShadowingNames
 @pytest.mark.asyncio
 async def test_size(cache: NamedCache[str, str]) -> None:
@@ -495,6 +505,46 @@ async def test_cache_release_event() -> None:
         await session.close()
 
 
+# noinspection PyShadowingNames,DuplicatedCode
+@pytest.mark.asyncio(loop_scope="function")
+async def test_cache_destroy_event() -> None:
+    session: Session = await tests.get_session()
+    cache: NamedCache[str, str] = await session.get_cache("test-" + str(int(time() * 1000)))
+    name: str = "UNSET"
+    destroy_event: Event = Event()
+    release_event: Event = Event()
+
+    def destroy_callback(n: str) -> None:
+        nonlocal name
+        name = n
+        destroy_event.set()
+
+    cache.on(MapLifecycleEvent.DESTROYED, destroy_callback)
+
+    def release_callback(n: str) -> None:
+        nonlocal name
+        name = n
+        release_event.set()
+
+    cache.on(MapLifecycleEvent.RELEASED, release_callback)
+
+    try:
+        await cache.put("A", "B")
+        await cache.put("C", "D")
+        assert await cache.size() == 2
+
+        await cache.destroy()
+        await tests.wait_for(destroy_event, EVENT_TIMEOUT)
+        await tests.wait_for(release_event, EVENT_TIMEOUT)
+
+        assert name == cache.name
+        assert cache.destroyed
+        assert cache.released
+        assert not cache.active
+    finally:
+        await session.close()
+
+
 # noinspection PyShadowingNames,DuplicatedCode,PyUnresolvedReferences
 @pytest.mark.asyncio
 async def test_add_remove_index(person_cache: NamedCache[str, Person]) -> None:
@@ -603,7 +653,7 @@ async def test_ttl_configuration(test_session: Session) -> None:
 
 @pytest.mark.asyncio
 async def test_unary_error(test_session: Session) -> None:
-    cache: NamedCache[str, str] = await test_session.get_cache("unary_error")
+    cache: NamedCache[str, dict] = await test_session.get_cache("unary_error")
 
     d = dict()
     d["@class"] = "com.foo.Bar"
@@ -611,4 +661,4 @@ async def test_unary_error(test_session: Session) -> None:
     with pytest.raises(Exception) as ex:
         await cache.put("a", d)
 
-    assert "Could not deserialize" in str(ex.value)
+    assert ("Could not deserialize" in str(ex.value)) or ("Failed to deserialize" in str(ex.value))

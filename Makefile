@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------------------------------------------------
-# Copyright (c) 2022, 2023, Oracle and/or its affiliates.
+# Copyright (c) 2022, 2025, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 #
@@ -32,7 +32,7 @@ override ENV_FILE            := tests/utils/.env
 MVN_VERSION ?= 1.0.0
 
 # Coherence CE version to run base tests against
-COHERENCE_VERSION ?= 22.06.10
+COHERENCE_VERSION ?= 22.06.11
 COHERENCE_GROUP_ID ?= com.oracle.coherence.ce
 COHERENCE_WKA1 ?= server1
 COHERENCE_WKA2 ?= server1
@@ -84,8 +84,12 @@ E2E_TESTS := tests/e2e/test_session.py \
 				tests/e2e/test_filters.py \
 				tests/e2e/test_processors.py \
 				tests/e2e/test_aggregators.py \
-				tests/e2e/test_near_caching.py \
-#				tests/e2e/test_ai.py \
+				tests/e2e/test_near_caching.py
+
+#----------------------------------------------------------------------------------------------------------------------
+# AI tests
+# ----------------------------------------------------------------------------------------------------------------------
+AI_TESTS := tests/e2e/test_ai.py
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Clean-up all of the build artifacts
@@ -170,6 +174,24 @@ generate-proto:  ## Generate Proto Files
 .PHONY: test
 test:  ##
 	pytest -W error --cov src/coherence --cov-report=term --cov-report=html $(UNIT_TESTS) $(E2E_TESTS)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Run tests with code coverage
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-with-ai
+test-with-ai:  ##
+	pytest -W error --cov src/coherence --cov-report=term --cov-report=html $(UNIT_TESTS) $(E2E_TESTS) $(AI_TESTS)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Run nslookup tests with code coverage
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-nslookup
+test-nslookup:  ##
+	pytest -W error \
+		--deselect tests/e2e/test_session.py::test_basics \
+		--deselect tests/e2e/test_session.py::test_session_lifecycle \
+		--deselect tests/e2e/test_session.py::test_fail_fast \
+		$(UNIT_TESTS) $(E2E_TESTS)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Run unit tests with code coverage
