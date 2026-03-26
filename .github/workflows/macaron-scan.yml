@@ -32,4 +32,4 @@ jobs:
           policy_file: check-github-actions
           policy_purl: 'pkg:github.com/vasac/coherence-py-client'
           output_dir: 'macaron-output'
-          upload_attestation: true
+          upload_attestation: false
