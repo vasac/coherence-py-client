@@ -20,6 +20,7 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+      artifact-metadata: write
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -29,4 +30,4 @@ jobs:
           repo_path: .
           policy_purl: check-github-actions
           output_dir: 'macaron-output'
-          upload_attestation: true
+          upload_attestation: false
