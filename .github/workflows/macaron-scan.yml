@@ -28,8 +28,8 @@ jobs:
       - name: Run Macaron Security Analysis Action
         uses: oracle/macaron@v0.22.0
         with:
-          repo_path: 'https://github.com/vasac/coherence-js-client'
+          repo_path: 'https://github.com/vasac/coherence-py-client'
           policy_file: check-github-actions
-          policy_purl: 'pkg:github.com/vasac/coherence-js-client'
+          policy_purl: 'pkg:github.com/vasac/coherence-py-client'
           output_dir: 'macaron-output'
           upload_attestation: true
